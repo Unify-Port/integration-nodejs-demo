@@ -1,5 +1,6 @@
 import { readUnifyPortClientConfig } from "../core/env.js";
 import { createUnifyPortClient } from "../core/unifyport-client.js";
+import { createCliRequestRecorder, printCliResponse } from "./output.js";
 
 /**
  * 调用 GET /v1/workspace 验证 API Key 对应的 workspace。
@@ -8,13 +9,13 @@ import { createUnifyPortClient } from "../core/unifyport-client.js";
  * UNIFYPORT_BASE_URL，不涉及任何渠道账号状态。
  */
 async function main(): Promise<void> {
-  const client = createUnifyPortClient(readUnifyPortClientConfig());
-  const responseBody = await client.request({
+  const recorder = createCliRequestRecorder(createUnifyPortClient(readUnifyPortClientConfig()));
+  const responseBody = await recorder.client.request({
     method: "GET",
     path: "/v1/workspace"
   });
 
-  console.log(JSON.stringify(responseBody, null, 2));
+  printCliResponse(recorder.getRequest(), responseBody);
 }
 
 await main();

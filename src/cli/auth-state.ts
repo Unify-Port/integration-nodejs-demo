@@ -1,16 +1,17 @@
-import { listWhatsAppRegions } from "../channels/whatsapp/api.js";
 import { readUnifyPortClientConfig } from "../core/env.js";
 import { createUnifyPortClient } from "../core/unifyport-client.js";
+import { getAccountAuth } from "../resources/auth/api.js";
 import { createCliRequestRecorder, printCliResponse } from "./output.js";
 
 /**
- * 调用 GET /v1/providers/whatsapp/regions 查询 WhatsApp 可用区域。
+ * 查询账号认证状态。
  *
- * 这个入口用于演示渠道能力发现，不创建账号、不启动授权，也不发送消息。
+ * 只调用 GET /v1/accounts/{account_id}/auth，不会改变账号状态。
  */
 async function main(): Promise<void> {
   const recorder = createCliRequestRecorder(createUnifyPortClient(readUnifyPortClientConfig()));
-  const responseBody = await listWhatsAppRegions(recorder.client);
+  const account_id = process.argv[2] as string;
+  const responseBody = await getAccountAuth(recorder.client, account_id);
 
   printCliResponse(recorder.getRequest(), responseBody);
 }

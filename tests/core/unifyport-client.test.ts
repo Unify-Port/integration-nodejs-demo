@@ -76,4 +76,38 @@ describe("createUnifyPortClient", () => {
     expect(headers.get("Content-Type")).toBe(null);
     expect(requestInit.body).toBe(undefined);
   });
+
+  it("携带 query 时拼接为 URLSearchParams", async () => {
+    let requestUrl = "";
+    const fetcher: typeof fetch = async (input) => {
+      requestUrl = String(input);
+
+      return new Response(JSON.stringify({ data: { items: [] } }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+    };
+
+    const client = createUnifyPortClient({
+      baseUrl: "https://api.unifyport.ai",
+      apiKey: "key_1",
+      fetch: fetcher
+    });
+
+    await client.request({
+      method: "GET",
+      path: "/v1/accounts/acc_example/conversations",
+      query: {
+        type: "user,group",
+        limit: 20,
+        cursor: ""
+      }
+    });
+
+    expect(requestUrl).toBe(
+      "https://api.unifyport.ai/v1/accounts/acc_example/conversations?type=user%2Cgroup&limit=20&cursor="
+    );
+  });
 });

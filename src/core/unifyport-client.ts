@@ -1,5 +1,7 @@
 export type UnifyPortMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
+export type UnifyPortQuery = Record<string, string | number | boolean>;
+
 export interface UnifyPortClientConfig {
   baseUrl: string;
   apiKey: string;
@@ -9,6 +11,7 @@ export interface UnifyPortClientConfig {
 export interface UnifyPortRequest {
   method: UnifyPortMethod;
   path: string;
+  query?: UnifyPortQuery;
   body?: unknown;
 }
 
@@ -28,18 +31,25 @@ export function createUnifyPortClient(config: UnifyPortClientConfig): UnifyPortC
     async request(request: UnifyPortRequest): Promise<unknown> {
       const headers = new Headers();
       headers.set("X-Api-Key", config.apiKey);
+      const url = new URL(request.path, config.baseUrl);
 
       const requestInit: RequestInit = {
         method: request.method,
         headers
       };
 
+      if (request.query !== undefined) {
+        for (const [key, value] of Object.entries(request.query)) {
+          url.searchParams.set(key, String(value));
+        }
+      }
+
       if (request.body !== undefined) {
         headers.set("Content-Type", "application/json");
         requestInit.body = JSON.stringify(request.body);
       }
 
-      const response = await config.fetch(new URL(request.path, config.baseUrl), requestInit);
+      const response = await config.fetch(url, requestInit);
       const responseBody = await response.json();
 
       return responseBody;
