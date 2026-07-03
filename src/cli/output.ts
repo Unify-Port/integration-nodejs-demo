@@ -50,6 +50,41 @@ export function formatCliRequest(request: UnifyPortRequest): string {
 }
 
 /**
+ * 将控制台参数内容格式化为 JSON 文本。
+ */
+function formatCliValue(value: unknown): string {
+  const text = JSON.stringify(value, null, 2);
+
+  if (text === undefined) {
+    return "无";
+  }
+
+  return text;
+}
+
+/**
+ * 格式化请求 query 参数。
+ */
+export function formatCliRequestQuery(request: UnifyPortRequest): string {
+  if (request.query === undefined) {
+    return "无";
+  }
+
+  return formatCliValue(request.query);
+}
+
+/**
+ * 格式化请求 body 参数。
+ */
+export function formatCliRequestBody(request: UnifyPortRequest): string {
+  if (request.body === undefined) {
+    return "无";
+  }
+
+  return formatCliValue(request.body);
+}
+
+/**
  * 通过指定写入函数先输出请求接口，再输出接口响应内容。
  */
 export function writeCliResponse(
@@ -57,8 +92,14 @@ export function writeCliResponse(
   request: UnifyPortRequest,
   responseBody: unknown
 ): void {
+  write("========== Request ==========");
   write(formatCliRequest(request));
-  write(JSON.stringify(responseBody, null, 2));
+  write("Query:");
+  write(formatCliRequestQuery(request));
+  write("Body:");
+  write(formatCliRequestBody(request));
+  write("========== Response ==========");
+  write(formatCliValue(responseBody));
 }
 
 /**

@@ -10,14 +10,18 @@ describe("demo cli scripts", () => {
     expect(packageJson.scripts).toMatchObject({
       demo: "tsx src/cli/demo.ts",
       "demo:workspace": "tsx src/cli/workspace.ts",
+      "demo:accounts:list": "tsx src/cli/list-accounts.ts",
+      "demo:conversations": "tsx src/cli/conversations.ts",
       "demo:webhook-endpoint:create": "tsx src/cli/create-webhook-endpoint.ts",
       "demo:whatsapp:regions": "tsx src/cli/whatsapp-regions.ts",
       "demo:whatsapp:create-account": "tsx src/cli/create-whatsapp-account.ts",
       "demo:whatsapp:auth-start": "tsx src/cli/start-whatsapp-auth.ts",
       "demo:auth:state": "tsx src/cli/auth-state.ts",
+      "demo:runtime:start": "tsx src/cli/start-runtime.ts",
       "demo:runtime:refresh": "tsx src/cli/refresh-runtime.ts",
       "demo:message:send-text": "tsx src/cli/send-whatsapp-text-message.ts",
-      "demo:webhook": "tsx src/webhook/server.ts"
+      "demo:webhook:ngrok": "tsx src/webhook/ngrok-server.ts"
     });
+    expect(packageJson.scripts).not.toHaveProperty("demo:webhook");
   });
 });

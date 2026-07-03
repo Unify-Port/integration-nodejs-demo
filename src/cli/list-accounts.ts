@@ -1,15 +1,16 @@
 import { readUnifyPortClientConfig } from "../core/env.js";
 import { createUnifyPortClient } from "../core/unifyport-client.js";
-import { refreshRuntime } from "../resources/runtime/api.js";
+import { listAccounts } from "../resources/accounts/api.js";
 import { createCliRequestRecorder, printCliResponse } from "./output.js";
 
 /**
- * 刷新账号 runtime 状态。
+ * 查询当前 workspace 下的账号列表。
+ *
+ * 这是安全的只读演示入口，用于确认当前 API Key 可访问的渠道账号。
  */
 async function main(): Promise<void> {
   const recorder = createCliRequestRecorder(createUnifyPortClient(readUnifyPortClientConfig()));
-  const account_id = process.argv[2] as string;
-  const responseBody = await refreshRuntime(recorder.client, account_id);
+  const responseBody = await listAccounts(recorder.client);
 
   printCliResponse(recorder.getRequest(), responseBody);
 }

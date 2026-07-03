@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from "express";
+import { writeWebhookEvent } from "./event-output.js";
 import { verifyUnifyPortSignature } from "./signature.js";
 
 export interface WebhookAppOptions {
@@ -46,7 +47,7 @@ export function createWebhookApp(options: WebhookAppOptions): express.Express {
       }
 
       const event = JSON.parse(rawBody.toString("utf8"));
-      console.log(JSON.stringify(event, null, 2));
+      writeWebhookEvent(console.log, event);
       response.status(204).send();
     }
   );
