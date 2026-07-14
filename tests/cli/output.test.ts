@@ -5,7 +5,10 @@ import {
   formatCliRequest,
   formatCliRequestBody,
   formatCliRequestQuery,
-  printCliResponse
+  getCliQrCodeValue,
+  printCliResponse,
+  renderCliQrCode,
+  writeCliResponse
 } from "../../src/cli/output.js";
 
 describe("cli output", () => {
@@ -186,5 +189,52 @@ describe("cli output", () => {
     } finally {
       log.mockRestore();
     }
+  });
+
+  it("extracts WhatsApp QR code link from response data", () => {
+    expect(
+      getCliQrCodeValue({
+        data: {
+          code: "https://wa.me/settings/linked_devices?qr=example"
+        }
+      })
+    ).toBe("https://wa.me/settings/linked_devices?qr=example");
+    expect(
+      getCliQrCodeValue({
+        data: {
+          code: "123456"
+        }
+      })
+    ).toBe("");
+  });
+
+  it("prints scannable QR section when response contains WhatsApp QR code link", () => {
+    const writes: string[] = [];
+    const qrCodeLink = "https://wa.me/settings/linked_devices?qr=example";
+
+    writeCliResponse(
+      (message) => writes.push(message),
+      {
+        method: "POST",
+        path: "/v1/accounts/acc_example/auth/qr/start",
+        body: {}
+      },
+      {
+        data: {
+          code: qrCodeLink
+        }
+      },
+      (value) => `QR:${value}`
+    );
+
+    expect(writes).toContain("========== QR Code ==========");
+    expect(writes).toContain(`QR:${qrCodeLink}`);
+    expect(writes).toContain("请使用 WhatsApp 扫描上方二维码。");
+  });
+
+  it("renders terminal QR code text", () => {
+    expect(
+      renderCliQrCode("https://wa.me/settings/linked_devices?qr=example").length
+    ).toBeGreaterThan(0);
   });
 });
