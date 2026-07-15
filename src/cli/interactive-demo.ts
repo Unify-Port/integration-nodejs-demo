@@ -4,7 +4,6 @@ import {
   sendWhatsAppTextMessage
 } from "../channels/whatsapp/api.js";
 import { readUnifyPortClientConfig } from "../core/env.js";
-import { createUnifyPortClient } from "../core/unifyport-client.js";
 import {
   cancelAuth,
   checkQrAuth,
@@ -23,6 +22,7 @@ import {
   stopRuntime
 } from "../resources/runtime/api.js";
 import { createWebhookEndpoint } from "../resources/webhook-endpoints/api.js";
+import { getWorkspace } from "../resources/workspace/api.js";
 import { FULL_API_DEMO_ACTIONS } from "./full-api-demo.js";
 import {
   createCliRequestRecorder,
@@ -218,10 +218,7 @@ async function runActionMenu(
  * 查询当前 workspace。
  */
 async function runWorkspaceCheck(runtime: InteractiveDemoRuntime): Promise<void> {
-  const responseBody = await runtime.recorder.client.request({
-    method: "GET",
-    path: "/v1/workspace"
-  });
+  const responseBody = await getWorkspace(runtime.recorder.client);
 
   writeCurrentResponse(runtime, responseBody);
 }
@@ -1037,7 +1034,7 @@ export async function runDemoSelection(runtime: InteractiveDemoRuntime): Promise
  */
 export async function runInteractiveDemo(): Promise<void> {
   const runtime: InteractiveDemoRuntime = {
-    recorder: createCliRequestRecorder(createUnifyPortClient(readUnifyPortClientConfig())),
+    recorder: createCliRequestRecorder(readUnifyPortClientConfig()),
     prompt: createInquirerPrompt(),
     select: createInquirerSelect(),
     write(message) {

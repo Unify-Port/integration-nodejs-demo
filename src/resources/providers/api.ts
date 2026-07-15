@@ -1,12 +1,14 @@
-import type { UnifyPortClient } from "../../core/unifyport-client.js";
-import { replacePathParameter } from "../shared.js";
+import type { UnifyPortDeviceClient } from "@unifyport/sdk-node/device";
 
 /**
  * 查询 provider 可用区域。
+ * SDK 接入期间保留资源函数边界，避免现有调用方同步改写。
  */
-export function listProviderRegions(client: UnifyPortClient, provider: string): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: replacePathParameter("/v1/providers/{provider}/regions", "provider", provider)
-  });
+export function listProviderRegions(
+  client: UnifyPortDeviceClient,
+  provider: string
+): Promise<unknown> {
+  return client
+    .listProviderRegions({ params: { path: { provider: provider as never } } })
+    .then((result) => result.data);
 }

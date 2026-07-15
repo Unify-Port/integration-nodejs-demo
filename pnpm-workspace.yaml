@@ -1,2 +1,5 @@
 allowBuilds:
   esbuild: true
+# 已核验首发版本，允许在供应链等待期内立即安装。
+minimumReleaseAgeExclude:
+  - "@unifyport/sdk-node@0.1.0"

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import type { UnifyPortClient, UnifyPortRequest } from "../../src/core/unifyport-client.js";
+import type { UnifyPortRequest } from "../../src/core/unifyport-client.js";
 import { createCliRequestRecorder } from "../../src/cli/output.js";
 import {
   getDemoMenuChoices,
@@ -15,7 +15,7 @@ function createRuntime(
 ): {
   runtime: InteractiveDemoRuntime;
   prompts: string[];
-  requests: UnifyPortRequest[];
+  requests: readonly UnifyPortRequest[];
   selects: Array<{
     label: string;
     choices: CliSelectChoice[];
@@ -23,7 +23,6 @@ function createRuntime(
   writes: string[];
 } {
   const prompts: string[] = [];
-  const requests: UnifyPortRequest[] = [];
   const selects: Array<{
     label: string;
     choices: CliSelectChoice[];
@@ -31,17 +30,19 @@ function createRuntime(
   const writes: string[] = [];
   let promptAnswerIndex = 0;
   let selectAnswerIndex = 0;
-  const client: UnifyPortClient = {
-    async request(request) {
-      requests.push(request);
-      return {
-        data: {
-          ok: true
+  const recorder = createCliRequestRecorder({
+    baseUrl: "https://api.unifyport.ai",
+    apiKey: "key_example",
+    async fetch() {
+      return new Response(JSON.stringify({ data: { ok: true } }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
         }
-      };
+      });
     }
-  };
-  const recorder = createCliRequestRecorder(client);
+  });
+  const requests = recorder.getRequests();
 
   return {
     runtime: {

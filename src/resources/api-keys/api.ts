@@ -1,53 +1,42 @@
-import type { UnifyPortClient } from "../../core/unifyport-client.js";
-import { replacePathParameter } from "../shared.js";
+import type { UnifyPortDeviceClient } from "@unifyport/sdk-node/device";
 
 /**
  * 查询 API Key 列表。
+ * SDK 接入期间保留资源函数边界，避免现有调用方同步改写。
  */
-export function listApiKeys(client: UnifyPortClient): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: "/v1/api-keys"
-  });
+export function listApiKeys(client: UnifyPortDeviceClient): Promise<unknown> {
+  return client.listApiKeys().then((result) => result.data);
 }
 
 /**
  * 创建 API Key。
  */
-export function createApiKey(client: UnifyPortClient, body: unknown): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: "/v1/api-keys",
-    body
-  });
+export function createApiKey(client: UnifyPortDeviceClient, body: unknown): Promise<unknown> {
+  return client.createApiKey({ body: body as never }).then((result) => result.data);
 }
 
 /**
  * 更新 API Key 状态。
  */
 export function updateApiKey(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   key_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "PATCH",
-    path: replacePathParameter("/v1/api-keys/{key_id}", "key_id", key_id),
-    body
-  });
+  return client
+    .updateApiKeyStatus({ params: { path: { key_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 轮换 API Key。
  */
 export function rotateApiKey(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   key_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter("/v1/api-keys/{key_id}/rotate", "key_id", key_id),
-    body
-  });
+  return client
+    .rotateApiKey({ params: { path: { key_id } }, body: body as never })
+    .then((result) => result.data);
 }

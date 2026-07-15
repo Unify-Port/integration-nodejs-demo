@@ -1,5 +1,12 @@
 import * as qrcodeTerminal from "qrcode-terminal";
-import type { UnifyPortClient, UnifyPortRequest } from "../core/unifyport-client.js";
+import {
+  createUnifyPortClient,
+  type UnifyPortClient,
+  type UnifyPortClientConfig,
+  type UnifyPortMethod,
+  type UnifyPortQuery,
+  type UnifyPortRequest
+} from "../core/unifyport-client.js";
 
 export type CliWrite = (message: string) => void;
 export type CliQrCodeRenderer = (value: string) => string;
@@ -9,23 +16,65 @@ type JsonObject = Record<string, unknown>;
 export interface CliRequestRecorder {
   client: UnifyPortClient;
   getRequest(): UnifyPortRequest;
+  getRequests(): readonly UnifyPortRequest[];
 }
 
 /**
- * 包装 CLI 使用的 client，并记录本次实际发出的请求。
+ * 从 SDK Request 提取 CLI 可以安全展示的请求信息。
+ *
+ * 认证 header 不进入记录结果，避免对外 demo 在控制台暴露 API Key。
  */
-export function createCliRequestRecorder(client: UnifyPortClient): CliRequestRecorder {
-  let recordedRequest: UnifyPortRequest;
+async function createRecordedRequest(request: Request): Promise<UnifyPortRequest> {
+  const url = new URL(request.url);
+  const query: UnifyPortQuery = {};
+
+  for (const [key, value] of url.searchParams) {
+    query[key] = value;
+  }
+
+  const recordedRequest: UnifyPortRequest = {
+    method: request.method as UnifyPortMethod,
+    path: url.pathname
+  };
+
+  if (url.searchParams.size > 0) {
+    recordedRequest.query = query;
+  }
+
+  if (request.body !== null) {
+    const bodyText = await request.clone().text();
+
+    if (bodyText.length > 0) {
+      recordedRequest.body = JSON.parse(bodyText) as unknown;
+    }
+  }
+
+  return recordedRequest;
+}
+
+/**
+ * 创建 CLI 使用的 SDK client，并记录 SDK 实际发出的请求。
+ *
+ * 记录发生在 SDK credential 注入之后，但只提取 URL、method 和 body，
+ * 因此既能反映真实请求，也不会保留认证 header。
+ */
+export function createCliRequestRecorder(config: UnifyPortClientConfig): CliRequestRecorder {
+  const requests: UnifyPortRequest[] = [];
+  const client = createUnifyPortClient({
+    ...config,
+    async fetch(request) {
+      requests.push(await createRecordedRequest(request));
+      return await config.fetch(request);
+    }
+  });
 
   return {
-    client: {
-      async request(request) {
-        recordedRequest = request;
-        return client.request(request);
-      }
-    },
+    client,
     getRequest() {
-      return recordedRequest;
+      return requests[requests.length - 1] as UnifyPortRequest;
+    },
+    getRequests() {
+      return requests;
     }
   };
 }

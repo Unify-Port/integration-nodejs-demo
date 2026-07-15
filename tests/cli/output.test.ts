@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import type { UnifyPortClient, UnifyPortRequest } from "../../src/core/unifyport-client.js";
 import {
   createCliRequestRecorder,
   formatCliRequest,
@@ -13,41 +12,43 @@ import {
 
 describe("cli output", () => {
   it("记录 CLI 实际发出的 request", async () => {
-    const requests: UnifyPortRequest[] = [];
-    const client: UnifyPortClient = {
-      async request(request) {
-        requests.push(request);
-        return {
-          data: {
-            ok: true
+    const recorder = createCliRequestRecorder({
+      baseUrl: "https://api.unifyport.ai",
+      apiKey: "key_example",
+      async fetch() {
+        return new Response(JSON.stringify({ data: { ok: true } }), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json"
           }
-        };
+        });
       }
-    };
-    const recorder = createCliRequestRecorder(client);
-
-    const responseBody = await recorder.client.request({
-      method: "GET",
-      path: "/v1/accounts/acc_example/conversations",
-      query: {
-        type: "user,group",
-        limit: 20,
-        cursor: ""
+    });
+    const result = await recorder.client.listConversations({
+      params: {
+        path: {
+          account_id: "acc_example"
+        },
+        query: {
+          type: "user,group",
+          limit: 20,
+          cursor: ""
+        }
       }
     });
 
-    expect(responseBody).toEqual({
+    expect(result.data).toEqual({
       data: {
         ok: true
       }
     });
-    expect(requests).toEqual([
+    expect(recorder.getRequests()).toEqual([
       {
         method: "GET",
         path: "/v1/accounts/acc_example/conversations",
         query: {
           type: "user,group",
-          limit: 20,
+          limit: "20",
           cursor: ""
         }
       }
@@ -57,10 +58,12 @@ describe("cli output", () => {
       path: "/v1/accounts/acc_example/conversations",
       query: {
         type: "user,group",
-        limit: 20,
+        limit: "20",
         cursor: ""
       }
     });
+    expect(recorder.getRequest()).not.toHaveProperty("headers");
+    expect(JSON.stringify(recorder.getRequest())).not.toContain("key_example");
   });
 
   it("格式化 request 的 method、path 和 query", () => {

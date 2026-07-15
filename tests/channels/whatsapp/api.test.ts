@@ -1,21 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { UnifyPortClient } from "../../../src/core/unifyport-client.js";
 import {
   createWhatsAppCodeAccount,
   listWhatsAppRegions,
   sendWhatsAppTextMessage,
   startWhatsAppCodeAuth
 } from "../../../src/channels/whatsapp/api.js";
+import { createRecordingClient } from "../../helpers/recording-client.js";
 
 describe("WhatsApp API", () => {
   it("按 WhatsApp Quickstart 顺序调用账号、授权和消息接口", async () => {
-    const requests: Array<Parameters<UnifyPortClient["request"]>[0]> = [];
-    const client: UnifyPortClient = {
-      async request(request) {
-        requests.push(request);
-        return { data: { ok: true } };
-      }
-    };
+    const { client, requests } = createRecordingClient();
 
     await listWhatsAppRegions(client);
     await createWhatsAppCodeAccount(client, {

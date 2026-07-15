@@ -1,5 +1,4 @@
 import { readUnifyPortClientConfig } from "../core/env.js";
-import { createUnifyPortClient } from "../core/unifyport-client.js";
 import { createCliRequestRecorder } from "./output.js";
 import { runConversationsDemo, type ConversationsDemoRuntime } from "./conversations-demo.js";
 import { createInquirerPrompt, createInquirerSelect } from "./select-prompt.js";
@@ -9,7 +8,7 @@ import { createInquirerPrompt, createInquirerSelect } from "./select-prompt.js";
  */
 async function main(): Promise<void> {
   const runtime: ConversationsDemoRuntime = {
-    recorder: createCliRequestRecorder(createUnifyPortClient(readUnifyPortClientConfig())),
+    recorder: createCliRequestRecorder(readUnifyPortClientConfig()),
     prompt: createInquirerPrompt(),
     select: createInquirerSelect(),
     write(message) {

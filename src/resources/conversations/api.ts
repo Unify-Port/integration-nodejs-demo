@@ -1,245 +1,173 @@
-import type { UnifyPortClient, UnifyPortQuery } from "../../core/unifyport-client.js";
-import { replacePathParameter } from "../shared.js";
+import type { UnifyPortDeviceClient } from "@unifyport/sdk-node/device";
+
+import type { UnifyPortQuery } from "../../core/unifyport-client.js";
 
 /**
  * 查询账号会话列表。
+ * SDK 接入期间保留资源函数边界，避免现有调用方同步改写。
  */
 export function listConversations(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   query: UnifyPortQuery
 ): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: replacePathParameter("/v1/accounts/{account_id}/conversations", "account_id", account_id),
-    query
-  });
+  return client
+    .listConversations({ params: { path: { account_id }, query: query as never } })
+    .then((result) => result.data);
 }
 
 /**
  * 查询单个会话详情。
  */
 export function getConversation(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   query: UnifyPortQuery
 ): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/info",
-      "account_id",
-      account_id
-    ),
-    query
-  });
+  return client
+    .getConversation({ params: { path: { account_id }, query: query as never } })
+    .then((result) => result.data);
 }
 
 /**
  * 查询群会话成员列表。
  */
 export function listConversationMembers(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   query: UnifyPortQuery
 ): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/members",
-      "account_id",
-      account_id
-    ),
-    query
-  });
+  return client
+    .listConversationMembers({ params: { path: { account_id }, query: query as never } })
+    .then((result) => result.data);
 }
 
 /**
  * 标记会话已读。
  */
 export function markConversationRead(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/read",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .markConversationRead({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 标记会话未读。
  */
 export function markConversationUnread(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/unread",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .markConversationUnread({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 静音会话。
  */
 export function muteConversation(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/mute",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .muteConversation({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 取消静音会话。
  */
 export function unmuteConversation(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/unmute",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .unmuteConversation({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 置顶会话。
  */
 export function pinConversation(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/pin",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .pinConversation({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 取消置顶会话。
  */
 export function unpinConversation(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/unpin",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .unpinConversation({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 查询会话标签列表。
  */
 export function listConversationLabels(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   query: UnifyPortQuery
 ): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/labels",
-      "account_id",
-      account_id
-    ),
-    query
-  });
+  return client
+    .listConversationLabels({ params: { path: { account_id }, query: query as never } })
+    .then((result) => result.data);
 }
 
 /**
  * 创建或更新会话标签。
  */
 export function upsertConversationLabel(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/labels/upsert",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .upsertConversationLabel({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 删除会话标签。
  */
 export function deleteConversationLabel(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/labels/delete",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .deleteConversationLabel({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }
 
 /**
  * 为会话执行标签成员操作。
  */
 export function setConversationLabelMembers(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string,
   body: unknown
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: replacePathParameter(
-      "/v1/accounts/{account_id}/conversations/labels",
-      "account_id",
-      account_id
-    ),
-    body
-  });
+  return client
+    .setConversationLabelMembers({ params: { path: { account_id } }, body: body as never })
+    .then((result) => result.data);
 }

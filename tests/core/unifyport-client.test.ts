@@ -3,11 +3,9 @@ import { createUnifyPortClient } from "../../src/core/unifyport-client.js";
 
 describe("createUnifyPortClient", () => {
   it("发送 JSON 请求时携带 X-Api-Key 和 Content-Type", async () => {
-    let requestUrl = "";
-    let requestInit: RequestInit = {};
-    const fetcher: typeof fetch = async (input, init) => {
-      requestUrl = String(input);
-      requestInit = init as RequestInit;
+    const requests: Request[] = [];
+    const fetcher = async (request: Request) => {
+      requests.push(request);
 
       return new Response(JSON.stringify({ data: { ok: true } }), {
         status: 200,
@@ -30,26 +28,23 @@ describe("createUnifyPortClient", () => {
       }
     };
 
-    const responseBody = await client.request({
-      method: "PATCH",
-      path: "/v1/workspace",
+    const result = await client.updateWorkspace({
       body
     });
+    const request = requests[0] as Request;
 
-    expect(requestUrl).toBe("https://api.unifyport.ai/v1/workspace");
-    expect(requestInit.method).toBe("PATCH");
-    expect(requestInit.body).toBe(JSON.stringify(body));
-    expect(requestInit.headers).toBeInstanceOf(Headers);
-    const headers = requestInit.headers as Headers;
-    expect(headers.get("X-Api-Key")).toBe("key_1");
-    expect(headers.get("Content-Type")).toBe("application/json");
-    expect(responseBody).toEqual({ data: { ok: true } });
+    expect(request.url).toBe("https://api.unifyport.ai/v1/workspace");
+    expect(request.method).toBe("PATCH");
+    expect(await request.clone().text()).toBe(JSON.stringify(body));
+    expect(request.headers.get("X-Api-Key")).toBe("key_1");
+    expect(request.headers.get("Content-Type")).toBe("application/json");
+    expect(result.data).toEqual({ data: { ok: true } });
   });
 
   it("没有请求体时不携带 Content-Type", async () => {
-    let requestInit: RequestInit = {};
-    const fetcher: typeof fetch = async (input, init) => {
-      requestInit = init as RequestInit;
+    const requests: Request[] = [];
+    const fetcher = async (request: Request) => {
+      requests.push(request);
 
       return new Response(JSON.stringify({ data: { name: "Production Workspace" } }), {
         status: 200,
@@ -65,22 +60,18 @@ describe("createUnifyPortClient", () => {
       fetch: fetcher
     });
 
-    await client.request({
-      method: "GET",
-      path: "/v1/workspace"
-    });
+    await client.getWorkspace();
+    const request = requests[0] as Request;
 
-    expect(requestInit.headers).toBeInstanceOf(Headers);
-    const headers = requestInit.headers as Headers;
-    expect(headers.get("X-Api-Key")).toBe("key_1");
-    expect(headers.get("Content-Type")).toBe(null);
-    expect(requestInit.body).toBe(undefined);
+    expect(request.headers.get("X-Api-Key")).toBe("key_1");
+    expect(request.headers.get("Content-Type")).toBe(null);
+    expect(request.body).toBe(null);
   });
 
   it("携带 query 时拼接为 URLSearchParams", async () => {
-    let requestUrl = "";
-    const fetcher: typeof fetch = async (input) => {
-      requestUrl = String(input);
+    const requests: Request[] = [];
+    const fetcher = async (request: Request) => {
+      requests.push(request);
 
       return new Response(JSON.stringify({ data: { items: [] } }), {
         status: 200,
@@ -96,17 +87,21 @@ describe("createUnifyPortClient", () => {
       fetch: fetcher
     });
 
-    await client.request({
-      method: "GET",
-      path: "/v1/accounts/acc_example/conversations",
-      query: {
-        type: "user,group",
-        limit: 20,
-        cursor: ""
+    await client.listConversations({
+      params: {
+        path: {
+          account_id: "acc_example"
+        },
+        query: {
+          type: "user,group",
+          limit: 20,
+          cursor: ""
+        }
       }
     });
+    const request = requests[0] as Request;
 
-    expect(requestUrl).toBe(
+    expect(request.url).toBe(
       "https://api.unifyport.ai/v1/accounts/acc_example/conversations?type=user%2Cgroup&limit=20&cursor="
     );
   });

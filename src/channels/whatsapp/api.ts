@@ -1,4 +1,5 @@
-import type { UnifyPortClient } from "../../core/unifyport-client.js";
+import type { UnifyPortDeviceClient } from "@unifyport/sdk-node/device";
+
 import {
   createWhatsAppCodeAccountPayload,
   createWhatsAppTextMessagePayload,
@@ -12,11 +13,10 @@ import {
  * 账号创建前先调用这个接口，客户演示时可以直接展示 supported 与 allocatable
  * 的差异，避免把区域选择逻辑散落到 CLI 或页面代码里。
  */
-export function listWhatsAppRegions(client: UnifyPortClient): Promise<unknown> {
-  return client.request({
-    method: "GET",
-    path: "/v1/providers/whatsapp/regions"
-  });
+export function listWhatsAppRegions(client: UnifyPortDeviceClient): Promise<unknown> {
+  return client
+    .listProviderRegions({ params: { path: { provider: "whatsapp" } } })
+    .then((result) => result.data);
 }
 
 /**
@@ -26,14 +26,12 @@ export function listWhatsAppRegions(client: UnifyPortClient): Promise<unknown> {
  * src/channels/<provider> 目录中，保持每个渠道的字段和流程独立。
  */
 export function createWhatsAppCodeAccount(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   input: CreateWhatsAppCodeAccountPayloadInput
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: "/v1/accounts",
-    body: createWhatsAppCodeAccountPayload(input)
-  });
+  return client
+    .createAccount({ body: createWhatsAppCodeAccountPayload(input) as never })
+    .then((result) => result.data);
 }
 
 /**
@@ -42,13 +40,12 @@ export function createWhatsAppCodeAccount(
  * 文档说明手机号已在账号创建时写入 provider_data.phone，因此这个请求不传 body。
  */
 export function startWhatsAppCodeAuth(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   account_id: string
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: `/v1/accounts/${account_id}/auth/start`
-  });
+  return client
+    .startAccountAuth({ params: { path: { account_id } } })
+    .then((result) => result.data);
 }
 
 /**
@@ -57,12 +54,10 @@ export function startWhatsAppCodeAuth(
  * 发送参数由 payloads.ts 统一生成，API 层只负责把它提交到 POST /v1/messages。
  */
 export function sendWhatsAppTextMessage(
-  client: UnifyPortClient,
+  client: UnifyPortDeviceClient,
   input: WhatsAppTextMessagePayloadInput
 ): Promise<unknown> {
-  return client.request({
-    method: "POST",
-    path: "/v1/messages",
-    body: createWhatsAppTextMessagePayload(input)
-  });
+  return client
+    .sendMessage({ body: createWhatsAppTextMessagePayload(input) as never })
+    .then((result) => result.data);
 }

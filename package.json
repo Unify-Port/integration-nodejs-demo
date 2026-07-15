@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.5.2",
+    "@unifyport/sdk-node": "0.1.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "qrcode-terminal": "^0.12.0"
