@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.5.2",
-    "@unifyport/sdk-node": "0.1.0",
+    "@unifyport/sdk-node": "0.1.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "qrcode-terminal": "^0.12.0"
