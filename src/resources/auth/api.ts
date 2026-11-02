@@ -99,3 +99,52 @@ export function cancelAuth(client: UnifyPortClient, account_id: string): Promise
     body: {}
   });
 }
+
+/**
+ * 创建 Provider 授权会话；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function createAccountAuthSession(
+  client: UnifyPortClient,
+  account_id: string
+): Promise<unknown> {
+  return client.request({
+    method: "POST",
+    path: replacePathParameter("/v1/accounts/{account_id}/auth-sessions", "account_id", account_id)
+  });
+}
+
+/**
+ * 提交 Passkey 凭证响应；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function submitAccountPasskeyResponse(
+  client: UnifyPortClient,
+  account_id: string,
+  body: unknown
+): Promise<unknown> {
+  return client.request({
+    method: "POST",
+    path: replacePathParameter(
+      "/v1/accounts/{account_id}/auth/passkey-response",
+      "account_id",
+      account_id
+    ),
+    body
+  });
+}
+
+/**
+ * 确认 Passkey 授权；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function confirmAccountPasskey(
+  client: UnifyPortClient,
+  account_id: string
+): Promise<unknown> {
+  return client.request({
+    method: "POST",
+    path: replacePathParameter(
+      "/v1/accounts/{account_id}/auth/passkey-confirm",
+      "account_id",
+      account_id
+    )
+  });
+}

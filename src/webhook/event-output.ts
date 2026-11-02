@@ -3,6 +3,14 @@ type WebhookWrite = (message: string) => void;
 type JsonObject = Record<string, unknown>;
 
 const STANDARD_EVENT_DESCRIPTIONS: Record<string, string> = {
+  "contact.updated":
+    "Address-book fields changed; merge supplied fields and preserve empty clears.",
+  "post.comment.created":
+    "A post comment was observed; delivery is not an acknowledgement of a reply.",
+  "account.profile.updated": "The account profile changed; merge only the supplied profile fields.",
+  "call.incoming": "A gated incoming call event; its short-lived join URL is sensitive.",
+  "call.answered": "The call was answered; message.* call records remain a separate event stream.",
+  "call.ended": "The call ended; a late update must not regress its terminal state.",
   "message.received": "An inbound message arrived on the account.",
   "message.updated": "A previously delivered message was edited.",
   "message.deleted": "A message was deleted or recalled.",

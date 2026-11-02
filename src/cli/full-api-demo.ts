@@ -736,10 +736,20 @@ async function promptMessageTo(runtime: FullApiDemoRuntime): Promise<Record<stri
  */
 async function promptAccountBodyFields(
   runtime: FullApiDemoRuntime,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  required: boolean
 ): Promise<void> {
   const status = await promptField(runtime, "status");
-  const auth_mode = await promptField(runtime, "auth_mode");
+  /** 创建必须选定授权方式；PATCH 切换授权方式会清除会话，且只能单独提交该字段。 */
+  const field = FULL_API_PROMPT_FIELDS.auth_mode as CliPromptField;
+  const auth_mode = await promptCliField(runtime, {
+    ...field,
+    required,
+    description: "认证方式：qrcode、code 或 session；更新时必须单独提交 auth_mode，切换会清除旧会话"
+  });
+  if (required && auth_mode === "") {
+    throw new Error("auth_mode is required");
+  }
   const capabilities = await promptField(runtime, "capabilities");
   const provider_data = await promptField(runtime, "provider_data");
   const metadata = await promptField(runtime, "metadata");
@@ -751,6 +761,9 @@ async function promptAccountBodyFields(
   addOptionalBodyJson(body, "provider_data", provider_data);
   addOptionalBodyJson(body, "metadata", metadata);
   addOptionalBodyString(body, "provider_account_ref", provider_account_ref);
+  if (!required && auth_mode !== "" && Object.keys(body).length !== 1) {
+    throw new Error("auth_mode must be updated alone");
+  }
 }
 
 const WORKSPACE_ACTIONS: FullApiMenuAction[] = [
@@ -824,7 +837,7 @@ const ACCOUNT_ACTIONS: FullApiMenuAction[] = [
         region
       };
 
-      await promptAccountBodyFields(runtime, body);
+      await promptAccountBodyFields(runtime, body, true);
 
       const responseBody = await createAccount(runtime.recorder.client, body);
 
@@ -856,7 +869,7 @@ const ACCOUNT_ACTIONS: FullApiMenuAction[] = [
       addOptionalBodyString(body, "name", name);
       addOptionalBodyString(body, "provider", provider);
       addOptionalBodyString(body, "region", region);
-      await promptAccountBodyFields(runtime, body);
+      await promptAccountBodyFields(runtime, body, false);
 
       const responseBody = await updateAccount(runtime.recorder.client, account_id, body);
 

@@ -92,3 +92,24 @@ describe("writeWebhookEvent", () => {
     expect(writes).toContain(JSON.stringify(event.data, null, 2));
   });
 });
+
+it.each([
+  "contact.updated",
+  "post.comment.created",
+  "account.profile.updated",
+  "call.incoming",
+  "call.answered",
+  "call.ended"
+])("recognizes %s without changing the received payload", (type) => {
+  const event = {
+    id: "evt_example",
+    type,
+    provider: "whatsapp",
+    account_id: "acc_example",
+    data: { value: false, device: 0, title: "" }
+  };
+  const writes: string[] = [];
+  writeWebhookEvent((value) => writes.push(value), event);
+  expect(writes.join("\n")).not.toContain("Unrecognized event type");
+  expect(writes.join("\n")).toContain(JSON.stringify(event, null, 2));
+});
