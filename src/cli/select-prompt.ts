@@ -1,4 +1,4 @@
-import { input, select } from "@inquirer/prompts";
+import { input, password, select } from "@inquirer/prompts";
 
 export interface CliSelectChoice {
   label: string;
@@ -53,6 +53,14 @@ export function createInquirerSelect(): CliSelectRuntime["select"] {
  */
 export function createInquirerPrompt(): CliInputPrompt {
   return async function promptText(label) {
+    /** 凭证输入不能被 inquirer 回显并留在终端滚动日志中。 */
+    if (
+      /(?:password|session_url|signing_secret|webauthn_response|provider_data|reply_token|^code$)/u.test(
+        label
+      )
+    ) {
+      return password({ message: label });
+    }
     return input({
       message: label
     });

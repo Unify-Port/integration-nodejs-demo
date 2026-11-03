@@ -24,7 +24,7 @@ import {
 } from "../resources/runtime/api.js";
 import { createWebhookEndpoint } from "../resources/webhook-endpoints/api.js";
 import { listProviderRegions } from "../resources/providers/api.js";
-import { sendTextMessage } from "../resources/messages/api.js";
+import { sendMediaMessage, sendTextMessage } from "../resources/messages/api.js";
 import { FULL_API_DEMO_ACTIONS } from "./full-api-demo.js";
 import {
   createCliRequestRecorder,
@@ -712,6 +712,53 @@ async function runSendTextMessage(runtime: InteractiveDemoRuntime): Promise<void
   }
 }
 
+/** FB 媒体有独立受限入口，先验证运行态，再发送单个 E2EE 单聊媒体。 */
+async function runFacebookMedia(runtime: InteractiveDemoRuntime): Promise<void> {
+  const account_id = await promptField(runtime, "account_id");
+  const state = await refreshRuntime(runtime.recorder.client, account_id);
+  writeCurrentResponse(runtime, state);
+  if (typeof state !== "object" || state === null || !("data" in state)) return;
+  const data = state.data;
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("runtime_status" in data) ||
+    data.runtime_status !== "running"
+  ) {
+    runtime.write("未确认 runtime_status=running，停止发送。");
+    return;
+  }
+  runtime.write(
+    "只使用 E2EE user 会话的原始字符串 ID；无 caption、引用、mentions 或群消息。audio 为部分支持。"
+  );
+  const recipient_id = await promptField(runtime, "recipient_id");
+  const type = await runtime.select(
+    "选择单个媒体类型",
+    ["image", "video", "audio", "document", "file"].map((value) => ({ label: value, value }))
+  );
+  if (!["image", "video", "audio", "document", "file"].includes(type))
+    throw new Error("Unsupported Facebook media type");
+  const url = await promptCliField(runtime, {
+    name: "message.url",
+    required: true,
+    type: "string",
+    description: "单个媒体的 HTTP(S) URL",
+    example: "https://example.com/media",
+    emptyHint: ""
+  });
+  const parsed = new URL(url);
+  if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("Media URL must use HTTP(S)");
+  writeCurrentResponse(
+    runtime,
+    await sendMediaMessage(runtime.recorder.client, {
+      account_id,
+      to: { id: recipient_id, type: "user" },
+      message: { type, url }
+    })
+  );
+  runtime.write("accepted 仅表示受理；结果未知时不要自动重发。");
+}
+
 /**
  * 展示 ngrok 本地接收 webhook 的配置流程。
  */
@@ -960,6 +1007,7 @@ const AUTH_ACTIONS: DemoAction[] = [
 ];
 
 const MESSAGE_ACTIONS: DemoAction[] = [
+  { key: "facebook_send_media", title: "Facebook 单媒体消息", run: runFacebookMedia },
   {
     key: "message_send_text",
     title: "发送文本消息",

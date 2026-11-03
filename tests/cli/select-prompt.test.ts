@@ -1,9 +1,10 @@
-import { select } from "@inquirer/prompts";
+import { input, password, select } from "@inquirer/prompts";
 import { describe, expect, it, vi } from "vitest";
-import { createInquirerSelect } from "../../src/cli/select-prompt.js";
+import { createInquirerPrompt, createInquirerSelect } from "../../src/cli/select-prompt.js";
 
 vi.mock("@inquirer/prompts", () => ({
   input: vi.fn(),
+  password: vi.fn(),
   select: vi.fn()
 }));
 
@@ -48,3 +49,15 @@ describe("select prompt", () => {
     });
   });
 });
+
+// 受保护字段不能走会回显答案的普通文本提示。
+it.each(["password", "session_url", "webauthn_response", "provider_data", "reply_token", "code"])(
+  "masks %s input",
+  async (field) => {
+    vi.clearAllMocks();
+    vi.mocked(password).mockResolvedValue("protected_value");
+    expect(await createInquirerPrompt()(field)).toBe("protected_value");
+    expect(password).toHaveBeenCalledWith({ message: field });
+    expect(input).not.toHaveBeenCalled();
+  }
+);
