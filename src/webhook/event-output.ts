@@ -11,7 +11,9 @@ const STANDARD_EVENT_DESCRIPTIONS: Record<string, string> = {
   "call.incoming": "A gated incoming call event; its short-lived join URL is sensitive.",
   "call.answered": "The call was answered; message.* call records remain a separate event stream.",
   "call.ended": "The call ended; a late update must not regress its terminal state.",
-  "message.received": "An inbound message arrived on the account.",
+  /** 收到事件也可能是本方消息同步，方向只能取消息字段。 */
+  "message.received":
+    "A message was observed on the account; direction identifies inbound or outbound.",
   "message.updated": "A previously delivered message was edited.",
   "message.deleted": "A message was deleted or recalled.",
   "message.read": "A read receipt - the recipient read a message.",

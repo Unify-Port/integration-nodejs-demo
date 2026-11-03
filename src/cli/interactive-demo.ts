@@ -15,7 +15,7 @@ import {
   submitAuthCode,
   submitAuthPassword
 } from "../resources/auth/api.js";
-import { getAccount, listAccounts } from "../resources/accounts/api.js";
+import { createAccount, getAccount, listAccounts } from "../resources/accounts/api.js";
 import {
   reconnectRuntime,
   refreshRuntime,
@@ -23,6 +23,8 @@ import {
   stopRuntime
 } from "../resources/runtime/api.js";
 import { createWebhookEndpoint } from "../resources/webhook-endpoints/api.js";
+import { listProviderRegions } from "../resources/providers/api.js";
+import { sendTextMessage } from "../resources/messages/api.js";
 import { FULL_API_DEMO_ACTIONS } from "./full-api-demo.js";
 import {
   createCliRequestRecorder,
@@ -245,6 +247,12 @@ async function runChannelRegions(runtime: InteractiveDemoRuntime): Promise<void>
     return;
   }
 
+  if (channel === "facebook") {
+    const responseBody = await listProviderRegions(runtime.recorder.client, channel);
+    writeCurrentResponse(runtime, responseBody);
+    return;
+  }
+
   if (channel === "whatsapp") {
     const responseBody = await listWhatsAppRegions(runtime.recorder.client);
 
@@ -259,6 +267,23 @@ async function runCreateAccount(runtime: InteractiveDemoRuntime): Promise<void> 
   const channel = await selectSupportedChannel(runtime);
 
   if (channel === "back") {
+    return;
+  }
+
+  /** FB 创建只登记 session 授权方式，不能自动启动扫码或验证码流程。 */
+  if (channel === "facebook") {
+    const name = await promptField(runtime, "name");
+    const region = await promptField(runtime, "region");
+    const responseBody = await createAccount(runtime.recorder.client, {
+      name,
+      region,
+      provider: "facebook",
+      auth_mode: "session"
+    });
+    writeCurrentResponse(runtime, responseBody);
+    runtime.write(
+      "请通过导入 session 提交 session_url，再刷新 runtime；authorized 不证明已经 running。会话 URL 属于凭证，请勿分享。"
+    );
     return;
   }
 
@@ -636,6 +661,40 @@ async function runSendTextMessage(runtime: InteractiveDemoRuntime): Promise<void
     return;
   }
 
+  /** FB 导入成功不证明可发送；只在显式 running 后继续，不自动重连或重试。 */
+  if (channel === "facebook") {
+    const account_id = await promptField(runtime, "account_id");
+    const responseBody = await refreshRuntime(runtime.recorder.client, account_id);
+    writeCurrentResponse(runtime, responseBody);
+    if (typeof responseBody !== "object" || responseBody === null || !("data" in responseBody)) {
+      runtime.write("未确认 runtime_status=running，停止发送。");
+      return;
+    }
+    const data = responseBody.data;
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      !("runtime_status" in data) ||
+      data.runtime_status !== "running"
+    ) {
+      runtime.write("未确认 runtime_status=running，停止发送。");
+      return;
+    }
+    runtime.write(
+      "仅支持 E2EE 单聊；recipient_id 使用会话列表返回的字符串 ID，不使用用户名、手机号或资料 URL。不支持 caption、mentions 或引用回复。"
+    );
+    const recipient_id = await promptField(runtime, "recipient_id");
+    const text = await promptField(runtime, "text");
+    const result = await sendTextMessage(runtime.recorder.client, {
+      account_id,
+      to: { id: recipient_id, type: "user" },
+      message: { type: "text", text }
+    });
+    writeCurrentResponse(runtime, result);
+    runtime.write("accepted 仅表示受理；结果未知时不要自动重发。");
+    return;
+  }
+
   if (channel === "whatsapp") {
     const account_id = await promptField(runtime, "account_id");
     const recipient_id = await promptField(runtime, "recipient_id");
@@ -700,6 +759,20 @@ async function runRecommendedFlow(runtime: InteractiveDemoRuntime): Promise<void
   const channel = await selectSupportedChannel(runtime);
 
   if (channel === "back") {
+    return;
+  }
+
+  /** FB 推荐步骤独立说明，避免套用 WhatsApp 手机号授权或自动发送。 */
+  if (channel === "facebook") {
+    runtime.write(
+      "Facebook：查询可用区域 → 创建 session 账号 → 导入 session_url → 刷新 runtime，确认 running → 查询 type=user 的 E2EE 单聊 → 发送单条文本或媒体。"
+    );
+    runtime.write(
+      "会话列表仅覆盖当前同步范围；空页仍须检查 has_more 并原样回传 cursor。群、联系人、帖子评论和通话暂不支持。"
+    );
+    runtime.write(
+      "Webhook 复用 message.received、account.auth.succeeded、account.status.updated、account.auth.failed；普通连接错误不等于授权失效。实际投递需单独验收。"
+    );
     return;
   }
 

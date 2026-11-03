@@ -39,7 +39,7 @@ describe("writeWebhookEvent", () => {
       "========== Webhook Event ==========",
       "id: evt_2f9c1a4b7e",
       "type: message.received",
-      "description: An inbound message arrived on the account.",
+      "description: A message was observed on the account; direction identifies inbound or outbound.",
       "provider: whatsapp",
       "account_id: acc_8c21d0",
       "occurred_at: 2026-06-08T12:34:56Z",
