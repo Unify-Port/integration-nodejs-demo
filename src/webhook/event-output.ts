@@ -1,3 +1,5 @@
+import { redactForOutput } from "../core/redaction.js";
+
 type WebhookWrite = (message: string) => void;
 
 type JsonObject = Record<string, unknown>;
@@ -33,7 +35,8 @@ const STANDARD_EVENT_DESCRIPTIONS: Record<string, string> = {
   "account.history.synced":
     "A WhatsApp history-sync batch finished; data.summary gives the delivered conversation and message counts.",
   "account.auth.required": "The account needs (re)authentication - a code, QR scan, or 2FA.",
-  "account.auth.succeeded": "Authentication finished and the account is online.",
+  "account.auth.succeeded":
+    "Authentication succeeded; query runtime_status separately before sending.",
   "account.auth.failed": "An authentication attempt failed."
 };
 
@@ -235,14 +238,14 @@ function writeSection(write: WebhookWrite, title: string, lines: string[]): void
 /**
  * 打印 webhook 事件内容。
  *
- * 所有事件都会先打印标准 envelope，再打印常用 data 字段提示，最后保留原始 JSON，
- * 方便客户演示时同时查看事件类型、账号状态、会话 ID、消息 ID 和完整 payload。
+ * 先复制并脱敏再构造提示，防止敏感字段从提示或 JSON 的任一入口泄漏。
  */
 export function writeWebhookEvent(write: WebhookWrite, event: unknown): void {
+  const safeEvent = redactForOutput(event);
   let eventRecord: JsonObject = {};
 
-  if (isJsonObject(event)) {
-    eventRecord = event;
+  if (isJsonObject(safeEvent)) {
+    eventRecord = safeEvent;
   }
 
   const dataValue = eventRecord.data;
@@ -266,5 +269,5 @@ export function writeWebhookEvent(write: WebhookWrite, event: unknown): void {
   writeSection(write, "Webhook Event", eventLines);
   writeSection(write, "Event Hints", hints);
   writeSection(write, "Event Data", [formatJson(dataValue)]);
-  writeSection(write, "Raw Event", [formatJson(event)]);
+  writeSection(write, "Raw Event", [formatJson(safeEvent)]);
 }

@@ -35,7 +35,8 @@ function createRuntime(
       requests.push(request);
       return {
         data: {
-          ok: true
+          ok: true,
+          provider: "whatsapp"
         }
       };
     }
@@ -82,8 +83,8 @@ function getAction(key: string) {
 }
 
 describe("full api demo", () => {
-  it("暴露官方文档中的 68 个接口入口", () => {
-    expect(getFullApiDemoActionCount()).toBe(68);
+  it("暴露官方文档中的 82 个接口入口", () => {
+    expect(getFullApiDemoActionCount()).toBe(82);
   });
 
   it("全接口模块只暴露全接口分组入口", () => {
@@ -102,6 +103,7 @@ describe("full api demo", () => {
     expect(selects[0]).toEqual({
       label: "请选择全接口分组",
       choices: [
+        { label: "Published API additions", value: "12" },
         { label: "Workspace", value: "1" },
         { label: "Providers", value: "2" },
         { label: "Accounts", value: "3" },
@@ -161,6 +163,7 @@ describe("full api demo", () => {
     await action.run(runtime);
 
     expect(requests).toEqual([
+      { method: "GET", path: "/v1/accounts/acc_example" },
       {
         method: "POST",
         path: "/v1/messages",

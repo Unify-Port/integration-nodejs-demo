@@ -1,6 +1,8 @@
+import { runPublishedApiDemo } from "./published-api-demo.js";
 import {
   createAccount,
   deleteAccount,
+  getAccountOperation,
   getAccount,
   listAccounts,
   updateAccount
@@ -59,7 +61,7 @@ import {
   startRuntime,
   stopRuntime
 } from "../resources/runtime/api.js";
-import type { UnifyPortQuery } from "../core/unifyport-client.js";
+import type { UnifyPortClient, UnifyPortQuery } from "../core/unifyport-client.js";
 import {
   createWebhookEndpoint,
   deactivateWebhookEndpoint,
@@ -818,7 +820,11 @@ const ACCOUNT_ACTIONS: FullApiMenuAction[] = [
     title: "List accounts",
     endpointCount: 1,
     async run(runtime) {
-      const responseBody = await listAccounts(runtime.recorder.client);
+      /** 分页由用户逐页选择，不在演示程序中无界抓取。 */
+      const query: UnifyPortQuery = {};
+      addOptionalQueryNumber(query, "limit", await promptField(runtime, "limit"));
+      addOptionalQueryString(query, "cursor", await promptField(runtime, "cursor"));
+      const responseBody = await listAccounts(runtime.recorder.client, query);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -839,7 +845,21 @@ const ACCOUNT_ACTIONS: FullApiMenuAction[] = [
 
       await promptAccountBodyFields(runtime, body, true);
 
-      const responseBody = await createAccount(runtime.recorder.client, body);
+      if (provider === "facebook" && body.auth_mode !== "session") {
+        throw new Error("Facebook requires session authorization");
+      }
+      /** 同一次逻辑创建的幂等键由调用方持有，不能自动生成或自动重试。 */
+      const key = await promptCliField(runtime, {
+        name: "Idempotency-Key",
+        required: false,
+        type: "string",
+        description: "同一次创建及重试保持相同值（1–128 字符）",
+        example: "creation_example",
+        emptyHint: "留空不发送"
+      });
+      const headers: Record<string, string> = {};
+      if (key !== "") headers["Idempotency-Key"] = key;
+      const responseBody = await createAccount(runtime.recorder.client, body, headers);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -896,6 +916,27 @@ const ACCOUNT_ACTIONS: FullApiMenuAction[] = [
       const responseBody = await deleteAccount(runtime.recorder.client, account_id);
 
       writeCurrentResponse(runtime, responseBody);
+      /** 删除受理不等于完成；只在返回真实 operation_id 时提供一次显式查询。 */
+      if (typeof responseBody === "object" && responseBody !== null && "data" in responseBody) {
+        const data = responseBody.data;
+        if (
+          typeof data === "object" &&
+          data !== null &&
+          "operation_id" in data &&
+          typeof data.operation_id === "string"
+        ) {
+          runtime.write("删除已受理；operation 尚未证明完成。可查询操作状态，不要重复删除。");
+          const choice = await runtime.select("查询删除操作状态？", [
+            { label: "查询一次", value: "query" },
+            { label: "返回", value: "back" }
+          ]);
+          if (choice === "query")
+            writeCurrentResponse(
+              runtime,
+              await getAccountOperation(runtime.recorder.client, data.operation_id)
+            );
+        }
+      }
     }
   }
 ];
@@ -1060,6 +1101,61 @@ const RUNTIME_ACTIONS: FullApiMenuAction[] = [
   }
 ];
 
+/** 通用菜单也检查真实账号渠道，避免绕过 FB 单聊、运行态与消息能力限制。 */
+async function checkedMessage(
+  runtime: FullApiDemoRuntime,
+  operation: (client: UnifyPortClient, body: unknown) => Promise<unknown>,
+  body: Record<string, unknown>
+): Promise<unknown> {
+  if (typeof body.account_id !== "string") throw new Error("account_id is required");
+  const account = await getAccount(runtime.recorder.client, body.account_id);
+  if (typeof account !== "object" || account === null || !("data" in account))
+    throw new Error("Cannot verify account provider");
+  const data = account.data;
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("provider" in data) ||
+    typeof data.provider !== "string"
+  )
+    throw new Error("Cannot verify account provider");
+  if (data.provider === "facebook") {
+    if (operation !== sendTextMessage && operation !== sendMediaMessage)
+      throw new Error("Unsupported Facebook message operation");
+    const to = body.to;
+    const message = body.message;
+    if (typeof to !== "object" || to === null || !("type" in to) || to.type !== "user")
+      throw new Error("Facebook requires an E2EE user conversation");
+    if (
+      typeof message !== "object" ||
+      message === null ||
+      "caption" in message ||
+      "reply_to" in body ||
+      "mentions" in body ||
+      "provider_data" in body
+    )
+      throw new Error("Unsupported Facebook message options");
+    if (
+      !("type" in message) ||
+      typeof message.type !== "string" ||
+      !["text", "image", "video", "audio", "document", "file"].includes(message.type)
+    )
+      throw new Error("Unsupported Facebook message type");
+    const runtimeState = await refreshRuntime(runtime.recorder.client, body.account_id);
+    if (typeof runtimeState !== "object" || runtimeState === null || !("data" in runtimeState))
+      throw new Error("Cannot verify Facebook runtime");
+    const state = runtimeState.data;
+    if (
+      typeof state !== "object" ||
+      state === null ||
+      !("runtime_status" in state) ||
+      state.runtime_status !== "running"
+    )
+      throw new Error("Facebook runtime must be running");
+  }
+  return operation(runtime.recorder.client, body);
+}
+
 const MESSAGE_ACTIONS: FullApiMenuAction[] = [
   {
     key: "1",
@@ -1081,7 +1177,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
 
       addOptionalBodyJson(body, "provider_data", provider_data);
 
-      const responseBody = await sendTextMessage(runtime.recorder.client, body);
+      const responseBody = await checkedMessage(runtime, sendTextMessage, body);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -1103,7 +1199,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
 
       addOptionalBodyString(message, "caption", caption);
 
-      const responseBody = await sendMediaMessage(runtime.recorder.client, {
+      const responseBody = await checkedMessage(runtime, sendMediaMessage, {
         account_id,
         to,
         message
@@ -1120,7 +1216,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
       const account_id = await promptAccountId(runtime);
       const to = await promptMessageTo(runtime);
       const contacts = await promptField(runtime, "message.contacts");
-      const responseBody = await sendContactMessage(runtime.recorder.client, {
+      const responseBody = await checkedMessage(runtime, sendContactMessage, {
         account_id,
         to,
         message: {
@@ -1141,7 +1237,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
       const to = await promptMessageTo(runtime);
       const text = await promptField(runtime, "message.text");
       const reply_token = await promptField(runtime, "reply_token");
-      const responseBody = await sendReplyMessage(runtime.recorder.client, {
+      const responseBody = await checkedMessage(runtime, sendReplyMessage, {
         account_id,
         to,
         message: {
@@ -1165,7 +1261,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
       const to = await promptMessageTo(runtime);
       const text = await promptField(runtime, "message.text");
       const mentions = await promptField(runtime, "mentions");
-      const responseBody = await sendMentionMessage(runtime.recorder.client, {
+      const responseBody = await checkedMessage(runtime, sendMentionMessage, {
         account_id,
         to,
         message: {
@@ -1199,7 +1295,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
       addOptionalBodyNumber(body, "duration_seconds", duration_seconds);
       addOptionalBodyString(body, "sender_id", sender_id);
 
-      const responseBody = await pinMessage(runtime.recorder.client, body);
+      const responseBody = await checkedMessage(runtime, pinMessage, body);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -1232,7 +1328,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
 
       addOptionalBodyString(body, "sender_id", sender_id);
 
-      const responseBody = await revokeMessage(runtime.recorder.client, body);
+      const responseBody = await checkedMessage(runtime, revokeMessage, body);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -1256,7 +1352,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
 
       addOptionalBodyString(body, "sender_id", sender_id);
 
-      const responseBody = await reactMessage(runtime.recorder.client, body);
+      const responseBody = await checkedMessage(runtime, reactMessage, body);
 
       writeCurrentResponse(runtime, responseBody);
     }
@@ -1270,7 +1366,7 @@ const MESSAGE_ACTIONS: FullApiMenuAction[] = [
       const conversation_id = await promptField(runtime, "conversation_id");
       const message_id = await promptField(runtime, "message_id");
       const content = await promptField(runtime, "content");
-      const responseBody = await editMessage(runtime.recorder.client, {
+      const responseBody = await checkedMessage(runtime, editMessage, {
         account_id,
         conversation_id,
         message_id,
@@ -1752,6 +1848,7 @@ const WEBHOOK_ENDPOINT_ACTIONS: FullApiMenuAction[] = [
  * 全接口分组的二级菜单入口，避免和推荐流程混在主菜单第一层。
  */
 const FULL_API_RESOURCE_ACTIONS: FullApiMenuAction[] = [
+  { key: "12", title: "Published API additions", endpointCount: 14, run: runPublishedApiDemo },
   {
     key: "1",
     title: "Workspace",
@@ -1864,7 +1961,7 @@ export const FULL_API_DEMO_ACTIONS: FullApiDemoAction[] = [
   {
     key: "full_api",
     title: "全接口分组",
-    endpointCount: 68,
+    endpointCount: 82,
     async run(runtime) {
       await runActionMenu(runtime, "全接口分组", "请选择全接口分组", FULL_API_RESOURCE_ACTIONS);
     }

@@ -1,3 +1,4 @@
+import { redactForOutput } from "../core/redaction.js";
 import * as qrcodeTerminal from "qrcode-terminal";
 import type { UnifyPortClient, UnifyPortRequest } from "../core/unifyport-client.js";
 
@@ -39,7 +40,9 @@ export function formatCliRequest(request: UnifyPortRequest): string {
   if (request.query !== undefined) {
     const query = new URLSearchParams();
 
-    for (const [key, value] of Object.entries(request.query)) {
+    for (const [key, value] of Object.entries(
+      redactForOutput(request.query) as Record<string, unknown>
+    )) {
       query.set(key, String(value));
     }
 
@@ -57,7 +60,7 @@ export function formatCliRequest(request: UnifyPortRequest): string {
  * 将控制台参数内容格式化为 JSON 文本。
  */
 function formatCliValue(value: unknown): string {
-  const text = JSON.stringify(value, null, 2);
+  const text = JSON.stringify(redactForOutput(value), null, 2);
 
   if (text === undefined) {
     return "无";
@@ -176,8 +179,8 @@ export function writeCliResponse(
   if (qrCodeValue.length > 0) {
     write("========== QR Code ==========");
     write(renderQrCode(qrCodeValue));
+    /** 扫码仍在当前交互终端完成，日志不再额外输出可复制的授权链接。 */
     write("请使用 WhatsApp 扫描上方二维码。");
-    write(`QR code link: ${qrCodeValue}`);
   }
 }
 

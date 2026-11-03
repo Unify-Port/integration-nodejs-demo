@@ -113,3 +113,35 @@ it.each([
   expect(writes.join("\n")).not.toContain("Unrecognized event type");
   expect(writes.join("\n")).toContain(JSON.stringify(event, null, 2));
 });
+
+/** 授权回调应可诊断等待状态，但不能把渠道自定义授权材料写入任何输出分区。 */
+it("redacts auth payloads in webhook hints, event data and raw event output", () => {
+  const event = {
+    id: "evt_auth_example",
+    type: "account.auth.required",
+    provider: "line",
+    account_id: "acc_example",
+    occurred_at: "2026-11-03T01:02:03.123456789Z",
+    data: {
+      auth_status: "awaiting_code",
+      runtime_status: "disconnected",
+      auth_payload: {
+        pin: "private_pin",
+        state: "private_state",
+        nested: { opaque: "private_opaque" }
+      }
+    }
+  };
+  const before = structuredClone(event);
+  const writes: string[] = [];
+  writeWebhookEvent((message) => writes.push(message), event);
+  const output = writes.join("\n");
+  for (const secret of ["private_pin", "private_state", "private_opaque"]) {
+    expect(output).not.toContain(secret);
+  }
+  expect(output).toContain('"auth_payload": "[REDACTED]"');
+  expect(writes).toContain("data.auth_status: awaiting_code");
+  expect(writes).toContain("data.runtime_status: disconnected");
+  expect(output).toContain(event.occurred_at);
+  expect(event).toEqual(before);
+});
