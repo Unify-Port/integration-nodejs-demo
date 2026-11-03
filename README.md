@@ -7,7 +7,7 @@
 ## 当前能力
 
 - 统一 REST client：封装 `X-Api-Key`、`baseUrl`、`method`、`path`、`query`、`body` 和 JSON 请求体。
-- 通用资源 wrapper：覆盖 Workspace、Providers、Accounts、Authentication、Runtime、Conversations、Messages、Contacts、Groups、API Keys 和 Webhook Endpoints。
+- 通用资源 wrapper：覆盖 Workspace、Providers、Accounts、Authentication、Runtime、Conversations、Messages、Contacts、Groups、API Keys、Webhook Endpoints、Posts 和 Calls。
 - WhatsApp 渠道流程：封装 WhatsApp regions、code auth 账号创建、code auth 启动、文本消息发送 payload。
 - CLI 演示入口：提供 `pnpm demo` 交互式菜单，也保留多个单独 demo 脚本。
 - 全接口演示菜单：当前测试要求直接接口入口合计为 68 个 endpoint。
@@ -279,3 +279,13 @@ pnpm test tests/webhook/signature.test.ts
 ```
 
 最终交付时需要说明已经运行的命令，以及没有运行的验证项。
+
+## 本次契约同步（未发布）
+
+资源 wrapper 对齐已批准的 Node 公开源码 `5901244` 对应的 78 个 HTTP operation。新增 14 个 wrapper 包括账号操作查询、浏览器授权会话、Passkey 提交/确认、添加联系人及关系查询、历史请求、帖子评论及通话。原菜单的 68 个入口含多个消息快捷方式，属于交互入口数，不是唯一 HTTP operation 数。新增危险动作只提供 wrapper，不自动开放无确认快捷入口。
+
+`listWebhookEndpoints`、`getWebhookEndpoint`、`deactivateWebhookEndpoint` 和 `deleteWebhookEndpoint` 可显式传 `{account_id}` query，用于筛选或归属校验。`listAccounts(client, query)` 支持 cursor/limit，原无参数调用继续有效；`createAccount(client, body, headers)` 可显式传 `Idempotency-Key`，不会自动重试。创建必须提供 `auth_mode`。PATCH 实际切换 `auth_mode` 时必须单独提交该字段，并可能清除旧会话；本地菜单在混传时拒绝发送。
+
+删除 `202` 返回操作数据，不能当作完成删除或退款；使用返回的 `operation_id` 调用 `getAccountOperation` 查询。旧 `204` 返回 null，不再尝试解析 JSON。路径参数统一编码为一个路径段，传入原始 ID，不要预编码。
+
+Webhook 输出识别全部 24 个标准事件名，保留原始事件。消费方应保留 false、0、空字符串及空选择列表，按事件字段语义合并稀疏更新，乱序通话更新不能回退 `ended`。通话 `join_url` 和授权会话输出属于敏感数据，wrapper 的返回值不能直接写入共享日志。本次仅运行离线 mock、静态检查及构建，未启动接收服务或调用真实发送/删除/拨号接口。

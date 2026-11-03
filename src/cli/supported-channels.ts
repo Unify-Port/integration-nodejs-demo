@@ -1,6 +1,6 @@
 import type { CliSelectChoice, CliSelectRuntime } from "./select-prompt.js";
 
-export type SupportedChannelId = "whatsapp";
+export type SupportedChannelId = "whatsapp" | "facebook";
 
 export interface SupportedChannel {
   id: SupportedChannelId;
@@ -13,7 +13,9 @@ export const SUPPORTED_CHANNELS: SupportedChannel[] = [
   {
     id: "whatsapp",
     label: "WhatsApp"
-  }
+  },
+  /** FB 只进入已接入的 session 与单聊流程，不沿用 WhatsApp 验证码授权。 */
+  { id: "facebook", label: "Facebook" }
 ];
 
 /**

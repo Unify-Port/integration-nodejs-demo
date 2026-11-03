@@ -168,7 +168,7 @@ describe("interactive demo", () => {
     expect(requests).toEqual([]);
   });
 
-  it("渠道选择列表当前只包含 WhatsApp", async () => {
+  it("渠道选择列表包含 WhatsApp 和 Facebook", async () => {
     const { runtime, selects } = createRuntime(
       [],
       ["accounts", "account_regions", "whatsapp", "back"]
@@ -183,6 +183,7 @@ describe("interactive demo", () => {
           label: "WhatsApp",
           value: "whatsapp"
         },
+        { label: "Facebook", value: "facebook" },
         {
           label: "返回上级菜单",
           value: "back"
@@ -522,6 +523,92 @@ describe("interactive demo", () => {
     expect(messageMenu.choices.map((choice) => choice.label)).toContain("发送文本消息");
     expect(messageMenu.choices.map((choice) => choice.label).join("\n")).not.toContain("WhatsApp");
     expect(writes).toContain("POST /v1/messages");
+  });
+
+  it("creates Facebook accounts with session authorization only", async () => {
+    const { runtime, prompts, requests } = createRuntime(
+      ["Facebook Support", "sg"],
+      ["accounts", "account_create", "facebook", "back"]
+    );
+    await runDemoSelection(runtime);
+    expect(prompts).toEqual(["name", "region"]);
+    expect(requests).toEqual([
+      {
+        method: "POST",
+        path: "/v1/accounts",
+        body: {
+          name: "Facebook Support",
+          region: "sg",
+          provider: "facebook",
+          auth_mode: "session"
+        }
+      }
+    ]);
+  });
+
+  it("queries Facebook regions through the shared wrapper", async () => {
+    const { runtime, requests } = createRuntime(
+      [],
+      ["accounts", "account_regions", "facebook", "back"]
+    );
+    await runDemoSelection(runtime);
+    expect(requests).toEqual([{ method: "GET", path: "/v1/providers/facebook/regions" }]);
+  });
+
+  it.each(["starting", "error", "disconnected", "unknown"])(
+    "does not send Facebook text while runtime is %s",
+    async (runtime_status) => {
+      const { runtime, prompts, writes } = createRuntime(
+        ["acc_example"],
+        ["messages", "message_send_text", "facebook", "back"]
+      );
+      const requests: UnifyPortRequest[] = [];
+      /** 只模拟运行态响应，避免测试依赖真实账号或产生发送。 */
+      runtime.recorder = createCliRequestRecorder({
+        async request(input) {
+          requests.push(input);
+          return { data: { runtime_status } };
+        }
+      });
+      await runDemoSelection(runtime);
+      expect(prompts).toEqual(["account_id"]);
+      expect(requests).toHaveLength(1);
+      expect(requests[0]?.path).toBe("/v1/accounts/acc_example/runtime/refresh");
+      expect(writes.join("\n")).toContain("停止发送");
+    }
+  );
+
+  it("sends one Facebook text only after running and preserves string identifiers", async () => {
+    const { runtime } = createRuntime(
+      ["acc_example", "9007199254740995", "Hello"],
+      ["messages", "message_send_text", "facebook", "back"]
+    );
+    const requests: UnifyPortRequest[] = [];
+    runtime.recorder = createCliRequestRecorder({
+      async request(input) {
+        requests.push(input);
+        return { data: { runtime_status: "running" } };
+      }
+    });
+    await runDemoSelection(runtime);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toEqual({
+      method: "POST",
+      path: "/v1/messages",
+      body: {
+        account_id: "acc_example",
+        to: { id: "9007199254740995", type: "user" },
+        message: { type: "text", text: "Hello" }
+      }
+    });
+  });
+
+  it("keeps the Facebook recommended guide separate from code authentication", async () => {
+    const { runtime, requests, writes } = createRuntime([], ["recommended", "facebook"]);
+    await runDemoSelection(runtime);
+    expect(requests).toHaveLength(0);
+    expect(writes.join("\n")).toContain("session_url");
+    expect(writes.join("\n")).toContain("不支持");
   });
 
   it("推荐流程选择渠道后串联基础检查、账号、授权、runtime 和消息发送", async () => {

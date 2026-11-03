@@ -108,3 +108,25 @@ export { createWebhookApp } from "./webhook/app.js";
 export type { WebhookAppOptions } from "./webhook/app.js";
 export { verifyUnifyPortSignature } from "./webhook/signature.js";
 export type { VerifyUnifyPortSignatureInput } from "./webhook/signature.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export { createCall, getActiveCall, hangupCall } from "./resources/calls/api.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export { getAccountOperation } from "./resources/accounts/api.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export {
+  createAccountAuthSession,
+  submitAccountPasskeyResponse,
+  confirmAccountPasskey
+} from "./resources/auth/api.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export { listPosts, getPost, listPostComments, replyPostComment } from "./resources/posts/api.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export { requestConversationHistory } from "./resources/conversations/api.js";
+
+/** 新接口保持 resource 边界，不自动启用通话或其他危险演示快捷入口。 */
+export { createContact, getContactMembership } from "./resources/contacts/api.js";

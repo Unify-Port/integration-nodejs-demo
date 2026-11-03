@@ -97,3 +97,37 @@ export function setContactNote(
     body
   });
 }
+
+/**
+ * 添加联系人；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function createContact(
+  client: UnifyPortClient,
+  account_id: string,
+  body: unknown
+): Promise<unknown> {
+  return client.request({
+    method: "POST",
+    path: replacePathParameter("/v1/accounts/{account_id}/contacts/add", "account_id", account_id),
+    body
+  });
+}
+
+/**
+ * 查询联系人是否在联系人列表中；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function getContactMembership(
+  client: UnifyPortClient,
+  account_id: string,
+  query: UnifyPortQuery
+): Promise<unknown> {
+  return client.request({
+    method: "GET",
+    path: replacePathParameter(
+      "/v1/accounts/{account_id}/contacts/membership",
+      "account_id",
+      account_id
+    ),
+    query
+  });
+}

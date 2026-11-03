@@ -111,3 +111,56 @@ describe("createUnifyPortClient", () => {
     );
   });
 });
+
+describe("current response contract", () => {
+  it("preserves 202 and accepts legacy empty 204", async () => {
+    const replies = [
+      new Response(
+        JSON.stringify({ data: { operation_id: "op_example", kind: "DELETE", state: "PENDING" } }),
+        { status: 202 }
+      ),
+      new Response(null, { status: 204 })
+    ];
+    const client = createUnifyPortClient({
+      baseUrl: "https://device.example.com",
+      apiKey: "test-key",
+      fetch: async () => {
+        const response = replies.shift();
+        if (response === undefined) throw new Error("unexpected request");
+        return response;
+      }
+    });
+    expect(await client.request({ method: "DELETE", path: "/v1/accounts/acc_example" })).toEqual({
+      data: { operation_id: "op_example", kind: "DELETE", state: "PENDING" }
+    });
+    expect(await client.request({ method: "DELETE", path: "/v1/accounts/acc_example" })).toBeNull();
+  });
+  it("forwards only explicit public headers and protects authentication", async () => {
+    const calls: RequestInit[] = [];
+    const client = createUnifyPortClient({
+      baseUrl: "https://device.example.com",
+      apiKey: "test-key",
+      fetch: async (_input, init) => {
+        calls.push(init as RequestInit);
+        return new Response("{}");
+      }
+    });
+    await client.request({
+      method: "POST",
+      path: "/v1/accounts",
+      body: {},
+      headers: { "Idempotency-Key": "idem_example" }
+    });
+    expect(new Headers((calls[0] as RequestInit).headers).get("Idempotency-Key")).toBe(
+      "idem_example"
+    );
+    await expect(
+      client.request({
+        method: "POST",
+        path: "/v1/accounts",
+        headers: { "X-Api-Key": "untrusted" }
+      })
+    ).rejects.toThrow("Unsupported request header");
+    expect(calls).toHaveLength(1);
+  });
+});

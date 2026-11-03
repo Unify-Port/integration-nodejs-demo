@@ -203,3 +203,22 @@ describe("full api demo", () => {
     );
   });
 });
+
+it("requires auth_mode before creating an account", async () => {
+  const { runtime, requests } = createRuntime(
+    ["Example", "whatsapp", "example", "", ""],
+    ["3", "2"]
+  );
+  await expect(getAction("full_api").run(runtime)).rejects.toThrow("auth_mode is required");
+  expect(requests).toEqual([]);
+});
+it("rejects mixed auth_mode changes before transport", async () => {
+  const { runtime, requests } = createRuntime(
+    ["acc_example", "Changed", "", "", "", "qrcode", "", "", "", ""],
+    ["3", "4"]
+  );
+  await expect(getAction("full_api").run(runtime)).rejects.toThrow(
+    "auth_mode must be updated alone"
+  );
+  expect(requests).toEqual([]);
+});

@@ -13,6 +13,7 @@ export interface UnifyPortRequest {
   path: string;
   query?: UnifyPortQuery;
   body?: unknown;
+  headers?: Record<string, string>;
 }
 
 export interface UnifyPortClient {
@@ -30,6 +31,15 @@ export function createUnifyPortClient(config: UnifyPortClientConfig): UnifyPortC
   return {
     async request(request: UnifyPortRequest): Promise<unknown> {
       const headers = new Headers();
+      if (request.headers !== undefined) {
+        for (const [name, value] of Object.entries(request.headers)) {
+          /** 只转发契约幂等与诊断头，调用输入不能覆盖认证或控制传输目标。 */
+          if (!["idempotency-key", "x-request-id"].includes(name.toLowerCase())) {
+            throw new Error("Unsupported request header");
+          }
+          headers.set(name, value);
+        }
+      }
       headers.set("X-Api-Key", config.apiKey);
       const url = new URL(request.path, config.baseUrl);
 
@@ -50,6 +60,10 @@ export function createUnifyPortClient(config: UnifyPortClientConfig): UnifyPortC
       }
 
       const response = await config.fetch(url, requestInit);
+      /** 204 是公开删除接口的旧成功契约，没有 JSON 正文。202 的操作结果继续原样交给调用方。 */
+      if (response.status === 204) {
+        return null;
+      }
       const responseBody = await response.json();
 
       return responseBody;

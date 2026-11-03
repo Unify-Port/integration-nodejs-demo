@@ -68,3 +68,18 @@ describe("webhook endpoints resources", () => {
     ]);
   });
 });
+
+it("passes explicit account scope to endpoint list and ownership checks", async () => {
+  const { client, requests } = createRecordingClient();
+  const query = { account_id: "acc_example" };
+  await listWebhookEndpoints(client, query);
+  await getWebhookEndpoint(client, "ep_example", query);
+  await deactivateWebhookEndpoint(client, "ep_example", query);
+  await deleteWebhookEndpoint(client, "ep_example", query);
+  expect(requests).toEqual([
+    { method: "GET", path: "/v1/webhook-endpoints", query },
+    { method: "GET", path: "/v1/webhook-endpoints/ep_example", query },
+    { method: "POST", path: "/v1/webhook-endpoints/ep_example/deactivate", query },
+    { method: "DELETE", path: "/v1/webhook-endpoints/ep_example", query }
+  ]);
+});

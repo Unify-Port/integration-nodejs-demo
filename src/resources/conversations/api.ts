@@ -243,3 +243,22 @@ export function setConversationLabelMembers(
     body
   });
 }
+
+/**
+ * 请求补拉会话历史消息；只传递契约输入，渠道约束与授权状态由服务端判断。
+ */
+export function requestConversationHistory(
+  client: UnifyPortClient,
+  account_id: string,
+  body: unknown
+): Promise<unknown> {
+  return client.request({
+    method: "POST",
+    path: replacePathParameter(
+      "/v1/accounts/{account_id}/conversations/history/request",
+      "account_id",
+      account_id
+    ),
+    body
+  });
+}

@@ -71,3 +71,24 @@ describe("accounts resources", () => {
     ]);
   });
 });
+
+it("preserves account pagination and caller supplied idempotency", async () => {
+  const { client, requests } = createRecordingClient();
+  await listAccounts(client, { limit: 2, cursor: "cursor_example" });
+  await createAccount(
+    client,
+    { provider: "whatsapp", region: "example", auth_mode: "qrcode" },
+    { "Idempotency-Key": "idem_example" }
+  );
+  expect(requests[0]).toEqual({
+    method: "GET",
+    path: "/v1/accounts",
+    query: { limit: 2, cursor: "cursor_example" }
+  });
+  expect(requests[1]).toEqual({
+    method: "POST",
+    path: "/v1/accounts",
+    body: { provider: "whatsapp", region: "example", auth_mode: "qrcode" },
+    headers: { "Idempotency-Key": "idem_example" }
+  });
+});
